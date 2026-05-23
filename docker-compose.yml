@@ -7,14 +7,24 @@ services:
     container_name: kel06-proxy
     restart: unless-stopped
     ports:
-      - "80:8080" # nginx-unprivileged berjalan pada port 8080 karena non-root tidak bisa bind port <1024
+      - "80:8080"   # HTTP  → redirect ke HTTPS (nginx-unprivileged pakai port >1024)
+      - "443:8443"  # HTTPS → main application (SSL/TLS termination)
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro  # Mount sertifikat SSL (read-only)
       - ./docker/app:/var/www/html:ro
     networks:
       - frontend-net
     depends_on:
       - app
+    # ── Container Security Hardening ──
+    security_opt:
+      - no-new-privileges:true  # Mencegah privilege escalation di dalam container
+    read_only: true             # Filesystem read-only (immutable container)
+    tmpfs:
+      - /tmp                    # Hanya /tmp yang writable (untuk nginx cache)
+      - /var/cache/nginx        # Cache directory writable
+      - /var/run                # PID file directory
 
   # Tier 2: Application Server (Laravel) - Menjalankan PHP-FPM sebagai user laravel (non-root)
   app:

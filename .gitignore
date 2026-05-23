@@ -8,3 +8,6 @@ Thumbs.db
 /.cursor/
 /node_modules/
 /vendor/
+
+# SSL certificates (JANGAN commit private key ke repository!)
+/docker/nginx/ssl/
