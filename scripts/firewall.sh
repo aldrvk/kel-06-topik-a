@@ -26,6 +26,9 @@
 set -euo pipefail
 
 SSH_PORT="${1:-2206}"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly LOGS_NGINX_DIR="${PROJECT_DIR}/logs/nginx"
 JAIL_LOCAL="/etc/fail2ban/jail.local"
 JAIL_BACKUP="${JAIL_LOCAL}.bak.$(date +%Y%m%d_%H%M%S)"
 SYSCTL_HARDENING="/etc/sysctl.d/99-kel06-hardening.conf"
@@ -189,9 +192,12 @@ else
 
 ${DOCKER_UFW_MARKER}
 # Mencegah Docker bypass aturan UFW pada container yang di-expose
-# Aturan ini memastikan traffic ke Docker container tetap melewati filter UFW
+# Mengalirkan traffic DOCKER-USER ke rantai filter UFW agar IP blocked/Fail2Ban bekerja
 *filter
 :DOCKER-USER - [0:0]
+-A DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-USER -j ufw-user-input
+-A DOCKER-USER -j ufw-user-forward
 -A DOCKER-USER -j RETURN
 COMMIT
 EOF
@@ -330,6 +336,14 @@ echo ""
 
 log_step "Konfigurasi Fail2Ban (jail.local)"
 
+# Membuat direktori log Nginx di host agar dapat diakses oleh kontainer & Fail2Ban
+log_info "Mempersiapkan direktori log Nginx di host..."
+mkdir -p "$LOGS_NGINX_DIR"
+chmod 777 "$LOGS_NGINX_DIR"
+touch "${LOGS_NGINX_DIR}/access.log" "${LOGS_NGINX_DIR}/error.log"
+chmod 666 "${LOGS_NGINX_DIR}/access.log" "${LOGS_NGINX_DIR}/error.log"
+log_success "Direktori log Nginx di host berhasil dipersiapkan."
+
 # Backup jail.local yang sudah ada (jika ada)
 if [ -f "$JAIL_LOCAL" ]; then
     log_info "Mencadangkan konfigurasi jail.local lama ke: ${JAIL_BACKUP}"
@@ -419,7 +433,7 @@ findtime = 600
 enabled  = true
 port     = http,https
 filter   = nginx-http-auth
-logpath  = /var/log/nginx/error.log
+logpath  = ${LOGS_NGINX_DIR}/error.log
 maxretry = 5
 bantime  = 3600
 findtime = 600
@@ -432,7 +446,7 @@ findtime = 600
 enabled  = true
 port     = http,https
 filter   = nginx-limit-req
-logpath  = /var/log/nginx/error.log
+logpath  = ${LOGS_NGINX_DIR}/error.log
 maxretry = 10
 bantime  = 3600
 findtime = 600
@@ -445,7 +459,7 @@ findtime = 600
 enabled  = true
 port     = http,https
 filter   = nginx-botsearch
-logpath  = /var/log/nginx/access.log
+logpath  = ${LOGS_NGINX_DIR}/access.log
 maxretry = 5
 bantime  = 86400
 findtime = 600
@@ -458,7 +472,7 @@ findtime = 600
 enabled  = true
 port     = http,https
 filter   = nginx-badbots
-logpath  = /var/log/nginx/access.log
+logpath  = ${LOGS_NGINX_DIR}/access.log
 maxretry = 3
 bantime  = 86400
 findtime = 600

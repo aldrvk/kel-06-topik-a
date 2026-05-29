@@ -104,6 +104,18 @@ log_info "Menguji sintaks konfigurasi SSH baru..."
 if sshd -t; then
     log_success "Sintaks konfigurasi SSH valid dan aman."
     
+    # Pengecekan keselamatan UFW untuk mencegah lockout
+    if command -v ufw &>/dev/null && ufw status | grep -q "Status: active"; then
+        if ! ufw status | grep -qE "^${SSH_PORT}/tcp\b.*ALLOW|^${SSH_PORT}\b.*ALLOW"; then
+            log_warn "UFW terdeteksi AKTIF tetapi port SSH kustom ${SSH_PORT} belum diizinkan!"
+            log_warn "Membuka port ${SSH_PORT}/tcp di UFW secara otomatis untuk mencegah LOCKOUT..."
+            ufw allow "${SSH_PORT}/tcp" comment "SSH - Port Kustom Kelompok 06 (Auto-open)"
+            log_success "Port ${SSH_PORT}/tcp berhasil diizinkan di UFW."
+        fi
+    else
+        log_info "UFW tidak aktif atau tidak terinstal. Melewati pengecekan port keselamatan."
+    fi
+
     log_info "Melakukan restart pada layanan SSH daemon..."
     if systemctl is-active --quiet sshd; then
         systemctl restart sshd

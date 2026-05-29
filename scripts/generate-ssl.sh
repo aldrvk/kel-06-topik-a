@@ -126,11 +126,11 @@ DNS.1 = ${COMMON_NAME}
 DNS.2 = localhost
 DNS.3 = kel06-proxy
 IP.1  = 127.0.0.1
-IP.2  = 10.0.0.0/8
+IP.2  = 10.0.0.1
 EOF
 
 log_success "OpenSSL config dengan SAN berhasil dibuat"
-log_info "  SAN entries: ${COMMON_NAME}, localhost, kel06-proxy, 127.0.0.1"
+log_info "  SAN entries: ${COMMON_NAME}, localhost, kel06-proxy, 127.0.0.1, 10.0.0.1"
 
 # ======================== GENERATE PRIVATE KEY + CERTIFICATE ========================
 
