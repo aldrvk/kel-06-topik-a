@@ -465,17 +465,15 @@ bantime  = 86400
 findtime = 600
 
 
-# ─── JAIL: NGINX BAD REQUEST (PROTEKSI MALFORMED REQUEST) ───────────────────
-# Mendeteksi dan memblokir IP yang mengirim request HTTP malformed / mencurigakan
-# (contoh: request dengan panjang abnormal, method tidak valid, dll.)
-[nginx-badbots]
-enabled  = true
-port     = http,https
-filter   = nginx-badbots
-logpath  = ${LOGS_NGINX_DIR}/access.log
-maxretry = 3
-bantime  = 86400
-findtime = 600
+# ─── JAIL: NGINX BAD REQUEST (DISABLED - NONEXISTENT FILTER) ───────────────────
+# [nginx-badbots]
+# enabled  = true
+# port     = http,https
+# filter   = nginx-badbots
+# logpath  = ${LOGS_NGINX_DIR}/access.log
+# maxretry = 3
+# bantime  = 86400
+# findtime = 600
 
 
 # ─── JAIL: RECIDIVE (BAN BERULANG = BAN LEBIH LAMA) ─────────────────────────
@@ -499,7 +497,6 @@ echo -e "  ${GREEN}├── ${BOLD}sshd${NC}              — Brute-force SSH (
 echo -e "  ${GREEN}├── ${BOLD}nginx-http-auth${NC}   — HTTP Basic Auth brute-force"
 echo -e "  ${GREEN}├── ${BOLD}nginx-limit-req${NC}   — Rate limiting violations (HTTP 429)"
 echo -e "  ${GREEN}├── ${BOLD}nginx-botsearch${NC}   — Bot/scanner detection"
-echo -e "  ${GREEN}├── ${BOLD}nginx-badbots${NC}     — Malformed request / bad bots"
 echo -e "  ${GREEN}└── ${BOLD}recidive${NC}          — Repeat offender escalation (1 minggu)"
 echo ""
 echo -e "  ${YELLOW}Fitur tambahan:${NC}"
@@ -528,6 +525,10 @@ else
     exit 1
 fi
 
+# Tunggu sejenak agar Fail2Ban socket siap sepenuhnya
+log_info "Menunggu socket Fail2Ban siap..."
+sleep 2
+
 # Verifikasi status Fail2Ban
 log_info "Menampilkan status Fail2Ban...\n"
 fail2ban-client status
@@ -535,7 +536,7 @@ echo ""
 
 # Tampilkan status per-jail (hanya yang aktif)
 log_info "Verifikasi jail yang aktif:"
-for jail in sshd nginx-http-auth nginx-limit-req nginx-botsearch nginx-badbots recidive; do
+for jail in sshd nginx-http-auth nginx-limit-req nginx-botsearch recidive; do
     if fail2ban-client status "$jail" &>/dev/null; then
         BANNED=$(fail2ban-client status "$jail" 2>/dev/null | grep "Currently banned" | awk '{print $NF}')
         log_success "  Jail ${BOLD}${jail}${NC} aktif (${BANNED:-0} IP banned)"
