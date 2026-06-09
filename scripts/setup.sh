@@ -50,7 +50,7 @@ set_sshd_config() {
     # Memeriksa apakah konfigurasi sudah ada (aktif atau dikomentari)
     if grep -qE "^[#\s]*${key}\b" "$SSHD_CONFIG"; then
         # Mengganti baris konfigurasi yang ada
-        sed -i -E "s/^[#\s]*${key}\b.*/${key} ${value}/" "$SSHD_CONFIG"
+        sed -i -E "s|^[#\s]*${key}\b.*|${key} ${value}|" "$SSHD_CONFIG"
     else
         # Menambahkan konfigurasi baru di akhir file
         echo "${key} ${value}" >> "$SSHD_CONFIG"
