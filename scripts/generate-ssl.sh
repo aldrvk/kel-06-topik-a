@@ -30,8 +30,8 @@ KEY_SIZE=4096                          # RSA key size (4096-bit = keamanan tingg
 CERT_DAYS=365                          # Masa berlaku sertifikat (1 tahun)
 DH_PARAM_SIZE=2048                     # DH parameters untuk PFS
 COUNTRY="ID"                           # Kode negara (Indonesia)
-STATE="Jawa Barat"                     # Provinsi
-LOCALITY="Bandung"                     # Kota
+STATE="Sumatera Utara"                 # Provinsi
+LOCALITY="Medan"                       # Kota
 ORGANIZATION="Kelompok 06"             # Nama organisasi/kelompok
 ORG_UNIT="Keamanan Server & Jaringan"  # Unit organisasi
 COMMON_NAME="kel06.local"              # Domain utama (Common Name)
