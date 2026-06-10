@@ -14,12 +14,12 @@ Proyek ini menerapkan konsep *Defense in Depth* dengan membagi infrastruktur ke 
 
 ```mermaid
 graph TD
-    subgraph Host OS (Ubuntu / Debian VM)
-        subgraph Docker Engine
-            subgraph Frontend Network (frontend-net)
+    subgraph "Host OS (Ubuntu / Debian VM)"
+        subgraph "Docker Engine"
+            subgraph "Frontend Network (frontend-net)"
                 Proxy[kel06-proxy <br> Nginx Unprivileged]
             end
-            subgraph Backend Network (backend-net)
+            subgraph "Backend Network (backend-net)"
                 App[kel06-app <br> PHP-FPM 8.3 / Laravel]
                 DB[(kel06-db <br> MariaDB 10.11)]
             end
