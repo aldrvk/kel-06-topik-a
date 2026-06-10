@@ -1,6 +1,9 @@
 # Keamanan Server & Jaringan — Kelompok 06 (Topik A)
 ## Tugas Kuliah Universitas Sumatera Utara (USU)
 
+🎥 **Link Presentasi:** [Google Drive](https://drive.google.com/file/d/1n0jRzwbYBMSnEpCdzJA7nMKxN2WHY1x-/view?usp=sharing)
+
+
 Repository ini berisi proyek implementasi **Arsitektur Server 3-Tier yang Aman (Hardened 3-Tier Architecture)** berbasis Docker (Nginx, PHP-FPM 8.3, dan MariaDB 10.11) untuk aplikasi Laravel, lengkap dengan skrip otomatisasi pengamanan (*hardening*) sistem operasi, SSH, Firewall (UFW), Intrusion Prevention System (Fail2Ban), SSL/TLS enkripsi tinggi, serta sistem backup otomatis dengan notifikasi.
 
 ---
