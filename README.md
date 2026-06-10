@@ -3,14 +3,13 @@
 
 🎥 **Link Presentasi:** [Google Drive](https://drive.google.com/file/d/1n0jRzwbYBMSnEpCdzJA7nMKxN2WHY1x-/view?usp=sharing)
 
-
-Repository ini berisi proyek implementasi **Arsitektur Server 3-Tier yang Aman (Hardened 3-Tier Architecture)** berbasis Docker (Nginx, PHP-FPM 8.3, dan MariaDB 10.11) untuk aplikasi Laravel, lengkap dengan skrip otomatisasi pengamanan (*hardening*) sistem operasi, SSH, Firewall (UFW), Intrusion Prevention System (Fail2Ban), SSL/TLS enkripsi tinggi, serta sistem backup otomatis dengan notifikasi.
+Selamat datang di dokumentasi proyek kami. Proyek ini menyajikan implementasi **Arsitektur Server 3-Tier yang Aman (Hardened 3-Tier Architecture)** berbasis Docker (Nginx, PHP-FPM 8.3, dan MariaDB 10.11) untuk aplikasi Laravel. Kami juga melengkapinya dengan berbagai skrip otomatisasi pengamanan (*hardening*) sistem operasi, SSH, Firewall (UFW), Intrusion Prevention System (Fail2Ban), enkripsi SSL/TLS tingkat tinggi, serta mekanisme backup otomatis yang terintegrasi.
 
 ---
 
-## 🏗️ Arsitektur Keamanan 3-Tier
+## 🏗️ Desain & Arsitektur Keamanan 3-Tier
 
-Proyek ini menerapkan konsep *Defense in Depth* dengan membagi infrastruktur ke dalam 3 tier mandiri yang saling terisolasi menggunakan Docker Bridge Networks:
+Dalam proyek ini, kami menerapkan konsep *Defense in Depth* dengan membagi infrastruktur ke dalam 3 tier mandiri yang saling terisolasi penuh menggunakan Docker Bridge Networks:
 
 ```mermaid
 graph TD
@@ -39,98 +38,98 @@ graph TD
 ```
 
 1. **Tier 1 — Reverse Proxy (`kel06-proxy`):**
-   * Menggunakan image **`nginxinc/nginx-unprivileged:alpine`** (berjalan sebagai user non-root untuk mencegah *privilege escalation* jika terjadi *breach*).
-   * File system container bersifat **`read_only`** (immutable container), hanya folder `/tmp` dan cache yang writable menggunakan *tmpfs*.
-   * Mengamankan komunikasi via HTTPS (TLS 1.2 & 1.3) dan secara otomatis mengalihkan (redirect) seluruh trafik HTTP port 80 ke HTTPS port 443.
+   * Kami menggunakan image **`nginxinc/nginx-unprivileged:alpine`** yang berjalan dengan hak akses pengguna non-root untuk meminimalkan dampak eksploitasi jika container berhasil ditembus.
+   * *Filesystem* container dikonfigurasi sebagai **`read_only`** (immutable container), di mana hanya direktori sementara `/tmp` dan cache yang dapat ditulisi (*tmpfs*).
+   * Proxy ini mengamankan jalur komunikasi menggunakan protokol HTTPS (TLS 1.2 & 1.3) serta secara otomatis mengalihkan (*redirect*) trafik HTTP (port 80) ke HTTPS (port 443).
 2. **Tier 2 — Application Server (`kel06-app`):**
-   * Menjalankan container Laravel (PHP-FPM 8.3) sebagai user non-root (`laravel`).
-   * Terisolasi dari database melalui bridge network khusus (`backend-net`) dan hanya terhubung ke proxy melalui `frontend-net`.
+   * Container Laravel (PHP-FPM 8.3) dijalankan sebagai pengguna non-root (`laravel`).
+   * Tier ini diisolasi dari database melalui bridge network privat (`backend-net`) dan hanya dapat dihubungi oleh proxy melalui `frontend-net`.
 3. **Tier 3 — Database Server (`kel06-db`):**
-   * Menggunakan MariaDB 10.11 terisolasi penuh.
-   * **Sangat Aman:** Port `3306` sama sekali tidak di-expose ke Host OS, hanya dapat diakses secara internal oleh container aplikasi (`kel06-app`) melalui `backend-net`.
+   * Kami mengisolasi database MariaDB 10.11 secara penuh.
+   * **Mekanisme Keamanan:** Port database `3306` sama sekali tidak diekspos ke Host OS untuk mencegah pemindaian port dari luar. Akses database hanya diizinkan secara internal dari container aplikasi (`kel06-app`) melalui `backend-net`.
 
 ---
 
-## 🔒 Fitur & Mekanisme Keamanan Utama
+## 🔒 Fitur & Implementasi Keamanan yang Kami Terapkan
 
 ### 1. SSL/TLS Hardening & Perfect Forward Secrecy (PFS)
-* Pembuatan sertifikat mandiri (*self-signed certificate*) menggunakan kunci **RSA 4096-bit** (tingkat keamanan tinggi) dan **SHA-256**.
-* Mendukung **Subject Alternative Name (SAN)** agar sertifikat diakui valid oleh browser modern tanpa memunculkan *common name warning*.
-* Menggunakan **DH (Diffie-Hellman) Parameters 2048-bit** untuk menjamin kerahasiaan sesi komunikasi di masa depan (*Perfect Forward Secrecy*).
+* Kami men-generate sertifikat SSL secara mandiri (*self-signed certificate*) menggunakan kunci **RSA 4096-bit** dan algoritma signature **SHA-256** untuk menjamin kekuatan enkripsi.
+* Sertifikat ini mendukung **Subject Alternative Name (SAN)** untuk memastikan validitasnya pada browser modern tanpa memicu peringatan ketidakcocokan domain (*Common Name warning*).
+* Kami menyertakan **DH (Diffie-Hellman) Parameters 2048-bit** untuk memastikan kerahasiaan sesi komunikasi di masa depan (*Perfect Forward Secrecy*).
 
 ### 2. Nginx Hardening & Security Headers
-Nginx dikonfigurasi secara ketat untuk memitigasi berbagai serangan web umum:
-* **Rate Limiting:** Menggunakan pembatasan request per IP (General: 10 req/s, Auth/Login: 5 req/s) untuk mitigasi serangan Brute-Force dan DDoS ringan.
-* **Security Headers Lengkap:** Mengaktifkan HSTS (1 tahun), Content Security Policy (CSP), X-Frame-Options (anti-clickjacking), X-Content-Type-Options (anti-sniffing), X-XSS-Protection, Referrer Policy, dan Permissions Policy.
-* **Server Hiding:** Menyembunyikan tanda tangan server (`server_tokens off;` dan menyembunyikan header `X-Powered-By`).
-* **Proteksi File Sensitif:** Memblokir akses langsung ke file sensitif (seperti `.env`, `.git`, file backup `.bak`/`.sql`, dan direktori tersembunyi).
+Nginx telah kami konfigurasi secara ketat guna menangkal berbagai potensi serangan web:
+* **Rate Limiting:** Kami membatasi frekuensi request berdasarkan IP (General: 10 req/detik dengan burst 20, Halaman Login/Auth: 5 req/detik dengan burst 10) untuk meredam serangan Brute-Force dan DDoS ringan.
+* **Security Headers:** Kami mengaktifkan HTTP Strict Transport Security (HSTS selama 1 tahun), Content Security Policy (CSP), X-Frame-Options (anti-clickjacking), X-Content-Type-Options (anti-sniffing), X-XSS-Protection, Referrer Policy, dan Permissions Policy.
+* **Server Hiding & Hardening:** Tanda tangan versi web server disembunyikan (`server_tokens off;` serta header `X-Powered-By`).
+* **Proteksi Berkas Sensitif:** Kami menutup akses ke berkas sensitif (seperti `.env`, `.git`, sisa berkas *backup* `.bak`/`.sql`, dan direktori tersembunyi).
 
 ### 3. SSH & System Hardening (Host OS)
-* Pemindahan port default SSH ke port kustom (default: `2206`).
-* Menonaktifkan login root langsung via SSH (`PermitRootLogin no`).
-* Menonaktifkan autentikasi password, mewajibkan penggunaan autentikasi kunci publik (*key-pair auth*).
-* Pengetatan izin akses (*hardening file permissions*) folder `.ssh/authorized_keys` dan direktori *home* pengguna (chmod 700 / 600).
+* Kami memindahkan port default SSH ke port kustom **`2206`** guna menghindari pemindaian port otomatis (*automated port scanning*).
+* Menolak koneksi login root langsung via SSH (`PermitRootLogin no`).
+* Menonaktifkan autentikasi menggunakan kata sandi biasa, sehingga mewajibkan penggunaan autentikasi berbasis kunci publik (*key-pair auth*).
+* Kami memperketat izin akses (*file permissions*) untuk berkas kunci publik `.ssh/authorized_keys` dan direktori *home* pengguna (chmod 700 dan 600).
 
 ### 4. Firewall (UFW) & Intrusion Prevention System (Fail2Ban)
-* Kebijakan firewall *Default Deny* untuk semua koneksi masuk (*incoming*), dan hanya membuka port yang diperlukan (SSH kustom `2206`, HTTP `80`, HTTPS `443`).
-* Integrasi aturan kompatibilitas Docker-UFW agar Docker tidak mengabaikan aturan firewall yang ada pada host.
-* **Fail2Ban Jails:** Mengaktifkan 5 lapis proteksi aktif:
-  1. `sshd`: Memblokir IP yang gagal login SSH (maks 3 kali percobaan, ban 1 jam).
-  2. `nginx-http-auth`: Memblokir IP yang gagal autentikasi basic auth Nginx.
-  3. `nginx-limit-req`: Memblokir IP yang melanggar batas rate-limiting Nginx (HTTP 429).
-  4. `nginx-botsearch`: Memblokir IP bot/scanner yang memindai halaman tak dikenal (seperti mencari `/admin`, `/.env`, dsb., ban 24 jam).
-  5. `recidive`: Memblokir IP yang berulang kali terkena ban sebelumnya (ban eskalasi selama 1 minggu).
-* **Kernel Sysctl Hardening:** Mengamankan kernel OS dari serangan jaringan (SYN flood protection/SYN cookies, reverse path filtering/anti-spoofing, menolak ICMP redirects/anti-MITM, menolak ICMP broadcasts/anti-Smurf, pembatasan akses dmesg dan kernel pointer, serta mengaktifkan ASLR penuh).
+* Kebijakan firewall diatur ke *Default Deny* untuk semua koneksi masuk (*incoming*), dan hanya mengizinkan port yang memang diperlukan (SSH port `2206`, HTTP `80`, HTTPS `443`).
+* Kami mengintegrasikan aturan Docker-UFW agar Docker daemon tidak dapat mengabaikan kebijakan firewall pada host.
+* **Fail2Ban Jails:** Kami mengaktifkan 5 modul pemantau log aktif:
+  1. `sshd`: Memblokir IP yang gagal autentikasi SSH sebanyak 3 kali (durasi ban: 1 jam).
+  2. `nginx-http-auth`: Memblokir IP yang gagal login pada halaman web basic auth.
+  3. `nginx-limit-req`: Memblokir IP yang melebihi batas rate-limiting Nginx (HTTP 429).
+  4. `nginx-botsearch`: Memblokir IP bot atau scanner yang mencoba mengakses berkas sensitif (ban selama 24 jam).
+  5. `recidive`: Memberikan hukuman pemblokiran lebih lama (1 minggu) bagi IP yang berulang kali melanggar aturan keamanan.
+* **Kernel Sysctl Hardening:** Kami menerapkan konfigurasi parameter kernel untuk mencegah serangan jaringan (SYN cookies untuk menahan SYN Flood, Reverse Path Filtering untuk anti-spoofing, mematikan ICMP redirects dan mematikan respon ICMP broadcast, serta mengamankan memori dengan ASLR tingkat 2).
 
 ### 5. Sistem Backup Otomatis & Terintegritas
-* Skrip backup database secara langsung melalui container Docker secara aman.
-* Membackup file konfigurasi penting (`docker-compose.yml`, `.env`, dan direktori `docker/`).
-* Melakukan kompresi backup (`.tar.gz`) dengan izin akses super ketat (hanya root yang bisa membaca/menulis - `chmod 600`).
-* Membuat verifikasi integritas file cadangan menggunakan **SHA256 Checksum**.
-* **Auto-Retention:** Menghapus berkas backup yang sudah berumur lebih dari 7 hari secara otomatis agar menghemat ruang disk.
-* **Notifikasi Instan:** Mengirim status backup (sukses/gagal) secara otomatis ke **Telegram Bot** dan **Email** pengelola.
+* Kami membuat skrip backup database secara aman dari dalam container database.
+* Skrip ini turut mencadangkan berkas konfigurasi kritis (`docker-compose.yml`, `.env`, dan direktori `docker/`).
+* Berkas backup dikompresi ke format `.tar.gz` dengan izin akses aman (`chmod 600`) dan diverifikasi menggunakan **SHA256 Checksum**.
+* **Retensi Otomatis:** Sistem akan menghapus otomatis arsip backup yang berusia lebih dari 7 hari guna menjaga efisiensi ruang penyimpanan.
+* **Notifikasi Aktif:** Mengirimkan laporan status backup (sukses/gagal) secara langsung ke **Telegram Bot** dan **Email** tim pengelola.
 
 ---
 
 ## 📂 Struktur Berkas Skrip (`scripts/`)
 
-Proyek ini dilengkapi dengan 4 skrip otomatisasi yang berada di direktori `scripts/`:
+Guna mengotomatisasi pengamanan, kami telah menyusun 4 buah berkas skrip utama:
 
 | Nama Skrip | Fungsi Utama | Cara Menjalankan |
 | --- | --- | --- |
-| **[`generate-ssl.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/generate-ssl.sh)** | Membuat SSL Self-Signed dengan SAN & DH Parameters. | `sudo bash scripts/generate-ssl.sh` |
-| **[`setup.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/setup.sh)** | Mengonfigurasi & mengamankan layanan SSH serta izin direktori pengguna di VM. | `sudo bash scripts/setup.sh [PORT_KUSTOM]` |
-| **[`firewall.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/firewall.sh)** | Setup UFW, Fail2Ban jails, aturan Docker compat, dan sysctl kernel. | `sudo bash scripts/firewall.sh [SSH_PORT]` |
-| **[`backup.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/backup.sh)** | Melakukan pencadangan database & konfigurasi, verifikasi checksum, retensi, dan notifikasi. | `sudo bash scripts/backup.sh` |
+| **[`generate-ssl.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/generate-ssl.sh)** | Men-generate sertifikat SSL Self-Signed dengan SAN & DH Parameters. | `sudo bash scripts/generate-ssl.sh` |
+| **[`setup.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/setup.sh)** | Mengonfigurasi serta mengamankan konfigurasi SSH dan izin berkas sistem. | `sudo bash scripts/setup.sh [PORT_KUSTOM]` |
+| **[`firewall.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/firewall.sh)** | Memasang firewall UFW, konfigurasi kompatibilitas Docker, mengaktifkan Fail2Ban, dan sysctl hardening. | `sudo bash scripts/firewall.sh [SSH_PORT]` |
+| **[`backup.sh`](file:///c:/laragon/www/kel-06-topik-a/scripts/backup.sh)** | Melakukan backup database dan konfigurasi, verifikasi integritas, retensi, serta pengiriman notifikasi. | `sudo bash scripts/backup.sh` |
 
 ---
 
-## 🚀 Langkah Pemasangan & Setup Lengkap (Deployment Guide)
+## 🚀 Panduan Pemasangan & Konfigurasi Sistem (Deployment Guide)
 
-### 1. Persiapan Awal di Host OS / VM (Khusus Linux Server)
-Sebelum menjalankan Docker, lakukan pengamanan awal pada sistem operasi VM Anda menggunakan skrip hardening yang telah disediakan.
+### 1. Inisialisasi Keamanan Host OS (VM Linux)
+Sebelum menjalankan container, kami melakukan langkah pengamanan awal pada sistem operasi host:
 
 ```bash
-# Clone repository
+# Melakukan clone repository
 git clone <url-repository-anda>
 cd kel-06-topik-a
 
-# 1. Jalankan VM & SSH Hardening (mengubah port SSH ke 2206 dan mewajibkan SSH Key)
+# Memberikan izin eksekusi skrip
 chmod +x scripts/*.sh
+
+# 1. Menjalankan SSH Hardening (mengubah port SSH ke 2206 dan mematikan password login)
 sudo bash scripts/setup.sh 2206
 
-# 2. Jalankan Firewall, Fail2Ban, & Sysctl Hardening
+# 2. Menjalankan konfigurasi UFW Firewall, Fail2Ban, dan Sysctl Kernel Hardening
 sudo bash scripts/firewall.sh 2206
 ```
-*Penting: Selalu ikuti petunjuk verifikasi koneksi SSH baru sebelum Anda menutup sesi terminal aktif Anda agar tidak terkunci (lockout).*
 
 ### 2. Generate SSL Certificate
-Sebelum menyalakan Docker, Anda wajib men-generate sertifikat SSL agar web proxy (Nginx) dapat berjalan dengan protokol HTTPS:
+Kami men-generate sertifikat SSL lokal agar layanan Nginx dapat berjalan di atas protokol HTTPS:
 
 ```bash
 sudo bash scripts/generate-ssl.sh
 ```
-Skrip ini akan menaruh file `server.crt`, `server.key`, `dhparam.pem`, dan `openssl-san.cnf` ke dalam direktori `./docker/nginx/ssl/`.
+Skrip ini akan menempatkan berkas sertifikat (`server.crt`, `server.key`, dan `dhparam.pem`) pada direktori `./docker/nginx/ssl/`.
 
 ### 3. Konfigurasi Environment File (`.env`)
 Salin file template `.env.example` menjadi `.env` di root direktori project:
@@ -174,69 +173,73 @@ docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate --seed
 ```
 
-Aplikasi Anda kini sudah aktif dengan protokol aman! Buka browser dan akses **`https://localhost`** atau **`https://kel06.local`**.
+Aplikasi kini dapat diakses dengan protokol HTTPS yang aman pada alamat **`https://localhost`** atau **`https://kel06.local`**.
 
 ---
 
-## 📅 Konfigurasi Otomatisasi Backup (Cron Job)
+## 📅 Otomatisasi Backup via Cron Job
 
-Untuk menjalankan backup secara otomatis setiap hari pada pukul **01:00 WIB**, Anda dapat menambahkan perintah cron job pada crontab root di Host OS:
+Untuk menjamin ketersediaan data, kami menjadwalkan eksekusi skrip backup setiap hari pada pukul **01:00 WIB** dengan mendaftarkannya pada crontab root Host OS:
 
 ```bash
-# Buka crontab root
+# Membuka crontab root
 sudo crontab -e
 ```
 
-Tambahkan baris berikut di bagian akhir file crontab:
+Pernyataan berikut ditambahkan pada baris terakhir crontab:
 ```cron
 0 1 * * * /bin/bash /absolute/path/to/kel-06-topik-a/scripts/backup.sh >> /var/log/project-backup.log 2>&1
 ```
-*(Ganti `/absolute/path/to/kel-06-topik-a` dengan path absolut lokasi direktori proyek Anda pada server).*
+*(Ganti `/absolute/path/to/kel-06-topik-a` dengan path riil direktori proyek).*
 
 ---
 
-## 🔍 Cheat Sheet Perintah Monitoring Keamanan
+## 🔍 Panduan Pengujian & Verifikasi untuk Bapak/Ibu Dosen / Penguji
 
-Untuk mempermudah demonstrasi dan verifikasi di hadapan dosen/penguji tugas, gunakan perintah-perintah berikut:
+Guna mempermudah Bapak/Ibu Dosen atau Penguji dalam memverifikasi dan menguji keandalan sistem keamanan yang telah kami rancang, berikut adalah serangkaian perintah pengujian yang dapat dieksekusi langsung pada server:
 
-### 1. Verifikasi Firewall (UFW)
+### 1. Verifikasi Aturan Firewall (UFW)
+Untuk memeriksa status firewall dan memastikan hanya port yang diperlukan saja yang terbuka:
 ```bash
-# Melihat aturan firewall yang aktif dan logging status
+# Menampilkan aturan firewall yang aktif beserta tingkat logging-nya
 sudo ufw status verbose
 
-# Melihat aturan firewall dengan nomor baris
+# Menampilkan aturan firewall dengan nomor indeks aturan
 sudo ufw status numbered
 ```
 
 ### 2. Verifikasi Intrusion Prevention (Fail2Ban)
+Untuk memantau aktivitas pemblokiran otomatis terhadap lalu lintas mencurigakan:
 ```bash
-# Melihat daftar jail yang aktif saat ini
+# Memeriksa daftar modul jail Fail2Ban yang sedang aktif
 sudo fail2ban-client status
 
-# Melihat statistik dan IP yang sedang diblokir pada jail SSH
+# Melihat detail IP yang sedang diblokir karena percobaan login SSH yang gagal
 sudo fail2ban-client status sshd
 
-# Melihat statistik dan IP yang sedang diblokir karena melanggar rate-limiting Nginx
+# Melihat detail IP yang diblokir akibat melanggar batas rate-limiting Nginx
 sudo fail2ban-client status nginx-limit-req
 
-# Membuka blokir (unban) IP tertentu secara manual
+# Membuka blokir (unban) IP secara manual
 sudo fail2ban-client set <nama-jail> unbanip <IP-Address>
 ```
 
-### 3. Verifikasi Kernel Hardening (Sysctl)
+### 3. Verifikasi Proteksi Kernel (Sysctl)
+Untuk memastikan sistem operasi host kebal terhadap serangan jaringan tingkat rendah:
 ```bash
-# Menampilkan seluruh nilai sysctl ipv4 yang sedang aktif
+# Menampilkan seluruh nilai sysctl ipv4 yang sedang berlaku
 sysctl -a | grep net.ipv4
 
-# Memeriksa apakah proteksi SYN flood aktif (nilainya harus 1)
+# Memastikan fitur SYN Cookies aktif (bernilai 1) untuk menangkal serangan SYN Flood
 sysctl net.ipv4.tcp_syncookies
 ```
 
-### 4. Membaca Log Sistem
+### 4. Memantau Log Aktivitas Keamanan
+Untuk memantau aktivitas operasional harian secara langsung:
 ```bash
-# Melihat log backup realtime
+# Membaca log proses backup secara realtime
 tail -f /var/log/project-backup.log
 
-# Melihat aktivitas log ban/unban Fail2Ban
+# Memantau log deteksi dan pemblokiran otomatis oleh Fail2Ban
 tail -f /var/log/fail2ban.log
 ```
